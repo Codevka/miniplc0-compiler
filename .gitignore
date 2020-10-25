@@ -6,3 +6,9 @@ CMakeSettings.json
 build
 .clangd
 compile_commands.json
+
+miniplc0-toolchain*
+.vscode
+E
+CMakeFiles
+Makefile
