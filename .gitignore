@@ -12,3 +12,4 @@ miniplc0-toolchain*
 E
 CMakeFiles
 Makefile
+.clang-format-bak
