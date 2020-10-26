@@ -141,7 +141,7 @@ std::pair<std::optional<Token>, std::optional<CompilationError>> Tokenizer::next
             // 如果当前已经读到了文件尾，则解析已经读到的字符串为整数
             //     解析成功则返回无符号整数类型的token，否则返回编译错误
             if (!current_char.has_value()) {
-                std::optional<unsigned> tmp_number = parseUnsigned(ss);
+                std::optional<int32_t> tmp_number = parseUnsigned(ss);
                 if (tmp_number.has_value()) {
                     Token token = Token(TokenType::UNSIGNED_INTEGER, tmp_number.value(), pos, currentPos());
                     return std::make_pair(std::make_optional<Token>(token), std::optional<CompilationError>());
@@ -153,13 +153,14 @@ std::pair<std::optional<Token>, std::optional<CompilationError>> Tokenizer::next
             // 如果读到的字符是数字，则存储读到的字符
             auto ch = current_char.value();
             if (miniplc0::isdigit(ch)) {
-                ss >> ch;
+                ss << ch;
             }
             // 如果读到的字符不是数字，则回退读到的字符，并解析已经读到的字符串为整数
+            //     解析成功则返回无符号整数类型的token，否则返回编译错误
             else {
                 unreadLast();
 
-                std::optional<unsigned> tmp_number = parseUnsigned(ss);
+                std::optional<int32_t> tmp_number = parseUnsigned(ss);
                 if (tmp_number.has_value()) {
                     Token token = Token(TokenType::UNSIGNED_INTEGER, tmp_number.value(), pos, currentPos());
                     return std::make_pair(std::make_optional<Token>(token), std::optional<CompilationError>());
@@ -167,7 +168,6 @@ std::pair<std::optional<Token>, std::optional<CompilationError>> Tokenizer::next
                 return std::make_pair(
                     std::optional<Token>(), std::make_optional<CompilationError>(pos, ErrorCode::ErrIntegerOverflow));
             }
-            //     解析成功则返回无符号整数类型的token，否则返回编译错误
             break;
         }
 
@@ -194,7 +194,7 @@ std::pair<std::optional<Token>, std::optional<CompilationError>> Tokenizer::next
             // 如果读到的是字符或字母，则存储读到的字符
             auto ch = current_char.value();
             if (miniplc0::isalpha(ch) || miniplc0::isdigit(ch)) {
-                ss >> ch;
+                ss << ch;
             } else {
                 unreadLast();
 
@@ -354,7 +354,7 @@ bool Tokenizer::isEOF() { return _ptr.first >= _lines_buffer.size(); }
 // Note: Is it evil to unread a buffer?
 void Tokenizer::unreadLast() { _ptr = previousPos(); }
 
-std::optional<unsigned> parseUnsigned(std::stringstream &ss) {
+std::optional<int32_t> parseUnsigned(std::stringstream &ss) {
     std::string str;
     long long   number = 0;
     ss >> str;
