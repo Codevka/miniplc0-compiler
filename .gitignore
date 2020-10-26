@@ -13,3 +13,6 @@ E
 CMakeFiles
 Makefile
 .clang-format-bak
+cmake-build-debug
+
+.idea

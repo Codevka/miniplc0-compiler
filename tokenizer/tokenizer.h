@@ -14,7 +14,9 @@
 
 namespace miniplc0 {
 
-class Tokenizer final {
+std::optional<unsigned> parseUnsigned(std::stringstream &ss);
+
+class Tokenizer         final {
   private:
     using uint64_t = std::uint64_t;
 
