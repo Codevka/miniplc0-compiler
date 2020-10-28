@@ -274,16 +274,18 @@ std::optional<CompilationError> Analyser::analyseExpression() {
 
 // <赋值语句> ::= <标识符>'='<表达式>';'
 // 需要补全
-// TODO
 std::optional<CompilationError> Analyser::analyseAssignmentStatement() {
     // 这里除了语法分析以外还要留意
     // 标识符声明过吗？
     // 标识符是常量吗？
     // 需要生成指令吗？
+    auto next = nextToken();
+    if (!next.has_value() || next.value().GetType() != TokenType::IDENTIFIER) {
+        return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrNeedIdentifier);
+    }
 
-    auto ident =
-        /*标识符的 token*/ Token(TokenType::NULL_TOKEN, nullptr, 0, 0, 0, 0);
-    auto name = ident.GetValueString();
+    auto ident = next.value();
+    auto name  = ident.GetValueString();
     // 未定义
     if (!isDeclared(name)) {
         return {CompilationError(_current_pos, ErrorCode::ErrNotDeclared)};
@@ -297,6 +299,22 @@ std::optional<CompilationError> Analyser::analyseAssignmentStatement() {
     _instructions.emplace_back(Operation::STO, index);
     if (!isInitializedVariable(name))
         makeInitialized(name);
+
+    // '='
+    next = nextToken();
+    if (!next.has_value() || next.value().GetType() != TokenType::EQUAL_SIGN)
+        return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrInvalidAssignment);
+
+    // <表达式>
+    auto err = analyseExpression();
+    if (err.has_value())
+        return err;
+
+    // ';'
+    next = nextToken();
+    if (!next.has_value() || next.value().GetType() != TokenType::SEMICOLON)
+        return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrNoSemicolon);
+
     return {};
 }
 
@@ -391,11 +409,16 @@ std::optional<CompilationError> Analyser::analyseFactor() {
     // 但是要注意 default 返回的是一个编译错误
     // TODO
     case TokenType::IDENTIFIER:
+
         break;
     case TokenType::UNSIGNED_INTEGER:
         break;
-    case TokenType::LEFT_BRACKET:
+    case TokenType::LEFT_BRACKET: {
+        auto err = analyseExpression();
+
         break;
+    }
+
     // 备用代码：
     //
     // - 加载变量
