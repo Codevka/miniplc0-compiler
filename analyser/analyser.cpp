@@ -186,19 +186,24 @@ std::optional<CompilationError> Analyser::analyseStatementSequence() {
         std::optional<CompilationError> err;
         switch (next.value().GetType()) {
         // FIXME: Maybe bug at `return`
-        case TokenType::IDENTIFIER:
+        case TokenType::IDENTIFIER: {
             err = analyseAssignmentStatement();
-            return err;
+            if (err.has_value())
+                return err;
             break;
+        }
 
-        case TokenType::PRINT:
+        case TokenType::PRINT: {
             err = analyseOutputStatement();
-            return err;
+            if (err.has_value())
+                return err;
             break;
+        }
 
-        case TokenType::SEMICOLON:
+        case TokenType::SEMICOLON: {
             return {};
             break;
+        }
             // 这里需要你针对不同的预读结果来调用不同的子程序
             // 注意我们没有针对空语句单独声明一个函数，因此可以直接在这里返回
         default:
@@ -229,13 +234,10 @@ std::optional<CompilationError> Analyser::analyseConstantExpression(int32_t &out
         unreadToken();
 
     next = nextToken();
-    if (!next.has_value())
-        return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrIncompleteExpression);
-    if (next.value().GetType() != TokenType::UNSIGNED_INTEGER)
+    if (!next.has_value() || next.value().GetType() != TokenType::UNSIGNED_INTEGER)
         return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrIncompleteExpression);
     int32_t number = std::any_cast<int32_t>(next.value().GetValue());
     out            = number * prefix;
-
     return {};
 }
 
@@ -352,7 +354,6 @@ std::optional<CompilationError> Analyser::analyseOutputStatement() {
 // 需要补全
 std::optional<CompilationError> Analyser::analyseItem() {
     // 可以参考 <表达式> 实现
-
     // <因子>
     auto err = analyseFactor();
     if (err.has_value())
@@ -364,6 +365,7 @@ std::optional<CompilationError> Analyser::analyseItem() {
         auto next = nextToken();
         if (!next.has_value())
             return {};
+
         auto type = next.value().GetType();
         if (type != TokenType::MULTIPLICATION_SIGN && type != TokenType::DIVISION_SIGN) {
             unreadToken();
@@ -403,9 +405,10 @@ std::optional<CompilationError> Analyser::analyseFactor() {
     next = nextToken();
     if (!next.has_value())
         return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrIncompleteExpression);
+    std::optional<CompilationError> err;
     switch (next.value().GetType()) {
-    // 这里和 <语句序列> 类似，需要根据预读结果调用不同的子程序
-    // 但是要注意 default 返回的是一个编译错误
+        // 这里和 <语句序列> 类似，需要根据预读结果调用不同的子程序
+        // 但是要注意 default 返回的是一个编译错误
 
     case TokenType::IDENTIFIER: {
         auto ident = next.value().GetValueString();
@@ -418,14 +421,14 @@ std::optional<CompilationError> Analyser::analyseFactor() {
     }
     case TokenType::UNSIGNED_INTEGER: {
         unreadToken();
-        int32_t val = 0;
-        auto    err = analyseConstantExpression(val);
+        std::int32_t val = 0;
+        err              = analyseConstantExpression(val);
         _instructions.emplace_back(Operation::LIT, val);
         break;
     }
     case TokenType::LEFT_BRACKET: {
-        auto err = analyseExpression();
-        next     = nextToken();
+        err  = analyseExpression();
+        next = nextToken();
         if (!next.has_value() || next.value().GetType() != RIGHT_BRACKET)
             return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrIncompleteExpression);
         break;
@@ -448,7 +451,8 @@ std::optional<CompilationError> Analyser::analyseFactor() {
     default:
         return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrIncompleteExpression);
     }
-
+    if (err.has_value())
+        return err;
     // 取负
     if (prefix == -1)
         _instructions.emplace_back(Operation::SUB, 0);
