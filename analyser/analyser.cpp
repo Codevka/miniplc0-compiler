@@ -385,7 +385,6 @@ std::optional<CompilationError> Analyser::analyseItem() {
 
 // <因子> ::= [<符号>]( <标识符> | <无符号整数> | '('<表达式>')' )
 // 需要补全
-// TODO
 std::optional<CompilationError> Analyser::analyseFactor() {
     // [<符号>]
     auto next   = nextToken();
@@ -407,15 +406,28 @@ std::optional<CompilationError> Analyser::analyseFactor() {
     switch (next.value().GetType()) {
     // 这里和 <语句序列> 类似，需要根据预读结果调用不同的子程序
     // 但是要注意 default 返回的是一个编译错误
-    // TODO
-    case TokenType::IDENTIFIER:
 
+    case TokenType::IDENTIFIER: {
+        auto ident = next.value().GetValueString();
+        if (!isDeclared(ident))
+            return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrNotDeclared);
+        if (isUninitializedVariable(ident))
+            return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrNotInitialized);
+        _instructions.emplace_back(Operation::LOD, getIndex(ident));
         break;
-    case TokenType::UNSIGNED_INTEGER:
+    }
+    case TokenType::UNSIGNED_INTEGER: {
+        unreadToken();
+        int32_t val = 0;
+        auto    err = analyseConstantExpression(val);
+        _instructions.emplace_back(Operation::LIT, val);
         break;
+    }
     case TokenType::LEFT_BRACKET: {
         auto err = analyseExpression();
-
+        next     = nextToken();
+        if (!next.has_value() || next.value().GetType() != RIGHT_BRACKET)
+            return std::make_optional<CompilationError>(_current_pos, ErrorCode::ErrIncompleteExpression);
         break;
     }
 
